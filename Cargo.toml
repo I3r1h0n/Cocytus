@@ -2,6 +2,8 @@
 name = "Cocytus"
 version = "0.1.0"
 edition = "2024"
+description = "Windows symbols extracting tool"
+authors = ["I3r1h0n"]
 
 [dependencies]
 ureq = "3"
