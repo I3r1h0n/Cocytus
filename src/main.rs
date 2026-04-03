@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 pub mod error;
 pub mod extractors;
 pub mod gui;
