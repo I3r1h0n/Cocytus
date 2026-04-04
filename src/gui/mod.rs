@@ -29,7 +29,7 @@ pub fn run() -> iced::Result {
     let mut app = iced::application(App::title, App::update, App::view)
         .subscription(App::subscription)
         .theme(App::theme)
-        .window_size((500.0, 540.0))
+        .window_size((600.0, 640.0))
         .centered()
         .resizable(true);
 

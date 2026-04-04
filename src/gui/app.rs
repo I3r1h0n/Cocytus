@@ -31,6 +31,7 @@ pub(super) enum PaneVariant {
 pub struct App {
     pub(super) screen: Screen,
     pub(super) iso_path: Option<PathBuf>,
+    pub(super) pdb_path: Option<PathBuf>,
     pub(super) mount_info: Option<MountInfo>,
     pub(super) wim_images: Vec<WimImage>,
     pub(super) selected_image: Option<WimImage>,
@@ -87,6 +88,7 @@ impl App {
             Self {
                 screen: Screen::Setup,
                 iso_path: None,
+                pdb_path: None,
                 mount_info: None,
                 wim_images: Vec::new(),
                 selected_image: None,

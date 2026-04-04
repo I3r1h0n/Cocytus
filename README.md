@@ -3,7 +3,7 @@
 <h1>Cocytus</h1>
 <img alt="Rust" src="https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=555555&logo=rust&color=0e0e0e">
 <img alt="Windows" src="https://img.shields.io/badge/windows-0e0e0e.svg?style=for-the-badge&labelColor=555555&logo=data:image/svg%2bxml;base64,PHN2ZyBpZD0iaWNvbnMiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDUxMiA1MTIiPjxwYXRoIGQ9Ik0zMS44NywzMC41OEgyNDQuN1YyNDMuMzlIMzEuODdaIiBmaWxsPSJ3aGl0ZSIvPjxwYXRoIGQ9Ik0yNjYuODksMzAuNThINDc5LjdWMjQzLjM5SDI2Ni44OVoiIGZpbGw9IndoaXRlIi8+PHBhdGggZD0iTTMxLjg3LDI2NS42MUgyNDQuN3YyMTIuOEgzMS44N1oiIGZpbGw9IndoaXRlIi8+PHBhdGggZD0iTTI2Ni44OSwyNjUuNjFINDc5Ljd2MjEyLjhIMjY2Ljg5WiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=">
-<img alt="Version" src="https://img.shields.io/badge/version-v0.1.0-0e0e0e?style=for-the-badge">
+<img alt="Version" src="https://img.shields.io/badge/version-v0.1.1-0e0e0e?style=for-the-badge">
 <img alt="Lic" src="https://img.shields.io/github/license/I3r1h0n/Sigurd?label=license&style=for-the-badge&color=0e0e0e">
 </div>
 

@@ -91,6 +91,7 @@ pub struct OptionsDialog {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileMenuAction {
     OpenNewIso,
+    OpenPdb,
     Quit,
 }
 
@@ -98,6 +99,7 @@ impl std::fmt::Display for FileMenuAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::OpenNewIso => write!(f, "Open new ISO"),
+            Self::OpenPdb => write!(f, "Open PDB"),
             Self::Quit => write!(f, "Quit"),
         }
     }
@@ -131,6 +133,9 @@ pub enum Message {
     IsoMounted(Result<(MountInfo, Vec<WimImage>), String>),
     ImageSelected(WimImage),
     Continue,
+    BrowsePdb,
+    PdbFilePicked(Option<PathBuf>),
+    DirectPdbLoaded(Result<PdbData, String>),
     PeFilesLoaded(Vec<String>),
     PaneResized(pane_grid::ResizeEvent),
     ToggleFileMenu,
