@@ -449,10 +449,12 @@ impl App {
                     return Task::none();
                 }
                 symbols.sort_by(|a, b| a.0.cmp(&b.0));
+                let enabled = vec![true; symbols.len()];
                 self.export_dialog = Some(ExportDialog {
                     format: self.view_mode,
                     path: None,
                     symbols,
+                    enabled,
                     exporting: false,
                     progress: 0,
                     current_name: String::new(),
@@ -501,6 +503,15 @@ impl App {
                     dlg.path = Some(p);
                 }
             }
+            Message::ToggleExportSymbol(idx) => {
+                if let Some(ref mut dlg) = self.export_dialog {
+                    if !dlg.exporting {
+                        if let Some(val) = dlg.enabled.get_mut(idx) {
+                            *val = !*val;
+                        }
+                    }
+                }
+            }
             Message::StartSymbolExport => {
                 if let Some(ref mut dlg) = self.export_dialog {
                     if dlg.path.is_none() || dlg.exporting {
@@ -522,6 +533,11 @@ impl App {
                     return Task::none();
                 };
                 if dlg.progress < dlg.symbols.len() {
+                    // Skip unchecked symbols
+                    if !dlg.enabled[dlg.progress] {
+                        dlg.progress += 1;
+                        return Task::perform(async {}, |()| Message::ExportTick);
+                    }
                     let (name, kind) = dlg.symbols[dlg.progress].clone();
                     dlg.current_name = name.clone();
                     let text = match (dlg.format, kind) {
@@ -543,7 +559,7 @@ impl App {
                 } else {
                     let buffer = std::mem::take(&mut dlg.buffer);
                     let path = dlg.path.clone().unwrap();
-                    let count = dlg.symbols.len();
+                    let count = dlg.enabled.iter().filter(|&&e| e).count();
                     return Task::perform(
                         async move {
                             std::fs::write(&path, buffer.as_bytes())

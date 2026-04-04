@@ -618,30 +618,67 @@ impl App {
 
     fn export_dialog_view(&self) -> Element<'_, Message> {
         let dlg = self.export_dialog.as_ref().unwrap();
-        let symbol_count = dlg.symbols.len();
+        let enabled_count = dlg.enabled.iter().filter(|&&e| e).count();
+        let total_count = dlg.symbols.len();
 
         // Title
         let title = text("Export Selected Symbols").size(16).color(t::ACCENT);
         let count_label =
-            text(format!("{symbol_count} symbols")).size(12).color(t::TEXT_MUTED);
+            text(format!("{enabled_count}/{total_count} symbols")).size(12).color(t::TEXT_MUTED);
 
-        // Symbol list
+        // Symbol list with checkboxes
         let symbol_items: Vec<Element<'_, Message>> = dlg
             .symbols
             .iter()
-            .map(|(name, kind)| {
+            .zip(dlg.enabled.iter())
+            .enumerate()
+            .map(|(idx, ((name, kind), &checked))| {
                 let kind_str = match kind {
                     SymbolKind::Struct => "struct",
                     SymbolKind::Function => "function",
                     SymbolKind::Enum => "enum",
                 };
+                let cb = checkbox("", checked)
+                    .on_toggle(move |_| Message::ToggleExportSymbol(idx))
+                    .size(14)
+                    .spacing(0)
+                    .style(|_theme, status| {
+                        let (bg, border_color) = match status {
+                            checkbox::Status::Active { is_checked }
+                            | checkbox::Status::Hovered { is_checked } => {
+                                if is_checked {
+                                    (t::ACCENT_MUTED, t::ACCENT)
+                                } else {
+                                    (t::BG_ELEMENT, t::BORDER)
+                                }
+                            }
+                            checkbox::Status::Disabled { .. } => (t::BG_ELEMENT, t::BORDER),
+                        };
+                        let icon_color = match status {
+                            checkbox::Status::Hovered { .. } => t::TEXT_PRIMARY,
+                            _ => t::ACCENT,
+                        };
+                        checkbox::Style {
+                            background: Background::Color(bg),
+                            icon_color,
+                            border: Border {
+                                radius: 3.0.into(),
+                                color: border_color,
+                                width: 1.0,
+                            },
+                            text_color: Some(t::TEXT_SECONDARY),
+                        }
+                    });
+                let text_color = if checked { t::TEXT_SECONDARY } else { t::TEXT_MUTED };
                 row![
-                    text(name.as_str()).size(12).color(t::TEXT_SECONDARY),
+                    cb,
+                    text(name.as_str()).size(12).color(text_color),
                     Space::with_width(Length::Fill),
                     text(kind_str).size(11).color(t::TEXT_MUTED),
                 ]
                 .spacing(8)
                 .padding([2, 12])
+                .align_y(iced::Alignment::Center)
                 .into()
             })
             .collect();
@@ -719,10 +756,10 @@ impl App {
 
         // Progress (visible only during export)
         let progress_section: Element<'_, Message> = if dlg.exporting {
-            let pct = if symbol_count == 0 {
+            let pct = if total_count == 0 {
                 1.0
             } else {
-                dlg.progress as f32 / symbol_count as f32
+                dlg.progress as f32 / total_count as f32
             };
             column![
                 progress_bar(0.0..=1.0, pct)
@@ -738,7 +775,7 @@ impl App {
                     }),
                 text(format!(
                     "Exporting: {} ({}/{})",
-                    dlg.current_name, dlg.progress, symbol_count
+                    dlg.current_name, dlg.progress, total_count
                 ))
                 .size(11)
                 .color(t::TEXT_MUTED),
@@ -750,7 +787,7 @@ impl App {
         };
 
         // Export button
-        let can_export = dlg.path.is_some() && !dlg.exporting;
+        let can_export = dlg.path.is_some() && !dlg.exporting && enabled_count > 0;
         let export_btn = if can_export {
             w::action_button("Export", Message::StartSymbolExport).width(120)
         } else {
