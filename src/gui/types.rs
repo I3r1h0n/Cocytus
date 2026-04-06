@@ -86,6 +86,7 @@ pub struct ExportDialog {
 /// Options dialog state — editable copy of config fields
 pub struct OptionsDialog {
     pub pdb_path: String,
+    pub default_view: ViewMode,
 }
 
 /// Menu actions
@@ -185,6 +186,7 @@ pub enum Message {
     OptionsPdbPathChanged(String),
     BrowseOptionsPdbPath,
     OptionsPdbPathPicked(Option<PathBuf>),
+    OptionsDefaultViewChanged(ViewMode),
     SaveOptions,
     PeDetailsLoaded(Result<crate::utils::pe_info::PeDetails, String>),
     DismissPeDetails,

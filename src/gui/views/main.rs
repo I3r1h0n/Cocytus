@@ -560,7 +560,7 @@ impl App {
 
         let title = text("Options").size(16).color(t::ACCENT);
 
-        // --- PDB cache path ---
+        // PDB cache path
         let pdb_label = text("PDB cache path").size(12).color(t::TEXT_SECONDARY);
 
         let pdb_input = text_input("./pdb", &dlg.pdb_path)
@@ -575,19 +575,33 @@ impl App {
             .spacing(8)
             .align_y(iced::Alignment::Center);
 
-        // --- Buttons ---
+        // Default view mode
+        let view_label = text("Default view mode").size(12).color(t::TEXT_SECONDARY);
+
+        let view_toggle = w::segmented_toggle(
+            "JSON",
+            "C/C++",
+            dlg.default_view == ViewMode::Json,
+            Message::OptionsDefaultViewChanged(ViewMode::Json),
+            Message::OptionsDefaultViewChanged(ViewMode::Cpp),
+        );
+
+        // Buttons 
         let buttons = row![
             w::action_button("Save", Message::SaveOptions).width(100),
             w::dark_button("Cancel", Message::DismissOptions).width(100),
         ]
         .spacing(12);
 
-        // --- Layout ---
+        // Layout
         let content = column![
             title,
             Space::with_height(12),
             pdb_label,
             pdb_row,
+            Space::with_height(12),
+            view_label,
+            view_toggle,
             Space::with_height(16),
             container(buttons).center_x(Length::Fill),
         ]

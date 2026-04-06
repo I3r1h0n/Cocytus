@@ -605,6 +605,10 @@ impl App {
             Message::ShowOptions => {
                 self.options_dialog = Some(OptionsDialog {
                     pdb_path: self.config.pdb_path.clone(),
+                    default_view: match self.config.default_view.as_str() {
+                        "json" => ViewMode::Json,
+                        _ => ViewMode::Cpp,
+                    },
                 });
             }
             Message::DismissOptions => {
@@ -632,9 +636,18 @@ impl App {
                     dlg.pdb_path = p.to_string_lossy().to_string();
                 }
             }
+            Message::OptionsDefaultViewChanged(mode) => {
+                if let Some(ref mut dlg) = self.options_dialog {
+                    dlg.default_view = mode;
+                }
+            }
             Message::SaveOptions => {
                 if let Some(dlg) = self.options_dialog.take() {
                     self.config.pdb_path = dlg.pdb_path;
+                    self.config.default_view = match dlg.default_view {
+                        ViewMode::Json => "json".to_string(),
+                        ViewMode::Cpp => "cpp".to_string(),
+                    };
                     if let Err(e) = crate::utils::config::save(&self.config) {
                         self.pdb_status = format!("Failed to save config: {e}");
                     } else {
