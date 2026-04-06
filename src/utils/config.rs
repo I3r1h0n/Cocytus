@@ -5,12 +5,19 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
     pub pdb_path: String,
+    #[serde(default = "default_view")]
+    pub default_view: String,
+}
+
+fn default_view() -> String {
+    "cpp".to_string()
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             pdb_path: "./pdb".to_string(),
+            default_view: default_view(),
         }
     }
 }

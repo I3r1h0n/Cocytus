@@ -76,6 +76,7 @@ pub struct ExportDialog {
     pub format: ViewMode,
     pub path: Option<PathBuf>,
     pub symbols: Vec<(String, SymbolKind)>,
+    pub enabled: Vec<bool>,
     pub exporting: bool,
     pub progress: usize,
     pub current_name: String,
@@ -85,12 +86,14 @@ pub struct ExportDialog {
 /// Options dialog state — editable copy of config fields
 pub struct OptionsDialog {
     pub pdb_path: String,
+    pub default_view: ViewMode,
 }
 
 /// Menu actions
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileMenuAction {
     OpenNewIso,
+    OpenPdb,
     Quit,
 }
 
@@ -98,6 +101,7 @@ impl std::fmt::Display for FileMenuAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::OpenNewIso => write!(f, "Open new ISO"),
+            Self::OpenPdb => write!(f, "Open PDB"),
             Self::Quit => write!(f, "Quit"),
         }
     }
@@ -131,6 +135,9 @@ pub enum Message {
     IsoMounted(Result<(MountInfo, Vec<WimImage>), String>),
     ImageSelected(WimImage),
     Continue,
+    BrowsePdb,
+    PdbFilePicked(Option<PathBuf>),
+    DirectPdbLoaded(Result<PdbData, String>),
     PeFilesLoaded(Vec<String>),
     PaneResized(pane_grid::ResizeEvent),
     ToggleFileMenu,
@@ -170,6 +177,7 @@ pub enum Message {
     SetExportDialogFormat(ViewMode),
     BrowseExportPath,
     ExportPathPicked(Option<PathBuf>),
+    ToggleExportSymbol(usize),
     StartSymbolExport,
     ExportTick,
     ExportWriteComplete(Result<String, String>),
@@ -178,6 +186,7 @@ pub enum Message {
     OptionsPdbPathChanged(String),
     BrowseOptionsPdbPath,
     OptionsPdbPathPicked(Option<PathBuf>),
+    OptionsDefaultViewChanged(ViewMode),
     SaveOptions,
     PeDetailsLoaded(Result<crate::utils::pe_info::PeDetails, String>),
     DismissPeDetails,

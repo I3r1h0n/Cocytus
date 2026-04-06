@@ -56,6 +56,7 @@ pub fn context_menu_panel<'a>() -> Element<'a, Message> {
 pub fn file_menu_dropdown<'a>() -> Element<'a, Message> {
     let items = vec![
         dropdown_button("Open new ISO", Message::FileMenu(FileMenuAction::OpenNewIso)),
+        dropdown_button("Open PDB", Message::FileMenu(FileMenuAction::OpenPdb)),
         dropdown_button("Quit", Message::FileMenu(FileMenuAction::Quit)),
     ];
 

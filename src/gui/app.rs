@@ -31,6 +31,7 @@ pub(super) enum PaneVariant {
 pub struct App {
     pub(super) screen: Screen,
     pub(super) iso_path: Option<PathBuf>,
+    pub(super) pdb_path: Option<PathBuf>,
     pub(super) mount_info: Option<MountInfo>,
     pub(super) wim_images: Vec<WimImage>,
     pub(super) selected_image: Option<WimImage>,
@@ -83,10 +84,16 @@ impl App {
             }),
             b: Box::new(pane_grid::Configuration::Pane(PaneVariant::Right)),
         };
+        let app_config = crate::utils::config::load();
+        let default_view = match app_config.default_view.as_str() {
+            "json" => ViewMode::Json,
+            _ => ViewMode::Cpp,
+        };
         (
             Self {
                 screen: Screen::Setup,
                 iso_path: None,
+                pdb_path: None,
                 mount_info: None,
                 wim_images: Vec::new(),
                 selected_image: None,
@@ -112,7 +119,7 @@ impl App {
                 show_functions: true,
                 show_enums: true,
                 symbol_tab: SymbolTab::Symbols,
-                view_mode: ViewMode::Json,
+                view_mode: default_view,
                 loading_json: false,
                 json_cache: HashMap::new(),
                 json_tabs: Vec::new(),
@@ -123,7 +130,7 @@ impl App {
                 options_dialog: None,
                 pe_details: None,
                 show_about: false,
-                config: crate::utils::config::load(),
+                config: app_config,
             },
             Task::none(),
         )

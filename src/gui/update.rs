@@ -32,6 +32,7 @@ impl App {
                 if let Some(info) = self.mount_info.take() {
                     iso::unmount(&info.iso_path);
                 }
+                self.pdb_path = None;
                 self.status = "Mounting ISO...".into();
                 self.wim_images.clear();
                 self.selected_image = None;
@@ -71,7 +72,61 @@ impl App {
             Message::ImageSelected(image) => {
                 self.selected_image = Some(image);
             }
+            // Direct PDB open
+            Message::BrowsePdb => {
+                return Task::perform(
+                    async {
+                        rfd::AsyncFileDialog::new()
+                            .set_title("Select PDB File")
+                            .add_filter("PDB files", &["pdb"])
+                            .pick_file()
+                            .await
+                            .map(|h| h.path().to_path_buf())
+                    },
+                    Message::PdbFilePicked,
+                );
+            }
+            Message::PdbFilePicked(Some(path)) => {
+                self.iso_path = None;
+                self.wim_images.clear();
+                self.selected_image = None;
+                if let Some(info) = self.mount_info.take() {
+                    iso::unmount(&info.iso_path);
+                }
+                self.status.clear();
+                self.pdb_path = Some(path);
+            }
+            Message::PdbFilePicked(None) => {}
+            Message::DirectPdbLoaded(result) => {
+                self.loading_pdb = false;
+                match result {
+                    Ok(data) => {
+                        self.pdb_status = format!(
+                            "{} — {} symbols loaded",
+                            data.file_name,
+                            data.symbols.len()
+                        );
+                        self.pdb_data = Some(data);
+                        self.screen = Screen::Main;
+                        self.show_iso_info = false;
+                        return iced::window::get_oldest().then(|id| {
+                            id.map_or(Task::none(), |id| {
+                                iced::window::resize(id, iced::Size::new(1500.0, 900.0))
+                            })
+                        });
+                    }
+                    Err(e) => {
+                        self.status = format!("PDB error: {e}");
+                    }
+                }
+            }
+
             Message::Continue => {
+                // Direct PDB path
+                if let Some(path) = self.pdb_path.take() {
+                    return self.start_direct_pdb_load(path);
+                }
+                // ISO + WIM path
                 if let (Some(info), Some(image)) =
                     (self.mount_info.clone(), self.selected_image.clone())
                 {
@@ -104,7 +159,7 @@ impl App {
             Message::FileMenu(action) => {
                 self.file_menu_open = false;
                 match action {
-                    FileMenuAction::OpenNewIso => {
+                    FileMenuAction::OpenNewIso | FileMenuAction::OpenPdb => {
                         if let Some(info) = self.mount_info.take() {
                             iso::unmount(&info.iso_path);
                         }
@@ -112,6 +167,7 @@ impl App {
                         self.pe_files.clear();
                         self.pe_filter.clear();
                         self.iso_path = None;
+                        self.pdb_path = None;
                         self.wim_images.clear();
                         self.selected_image = None;
                         self.selected_file = None;
@@ -133,11 +189,19 @@ impl App {
                         self.export_dialog = None;
                         self.show_iso_info = false;
                         self.iso_file_size = None;
-                        return iced::window::get_oldest().then(|id| {
+                        let resize = iced::window::get_oldest().then(|id| {
                             id.map_or(Task::none(), |id| {
-                                iced::window::resize(id, iced::Size::new(500.0, 540.0))
+                                iced::window::resize(id, iced::Size::new(600.0, 680.0))
                             })
                         });
+                        // If "Open PDB" was chosen, immediately open the file dialog
+                        if matches!(action, FileMenuAction::OpenPdb) {
+                            return Task::batch([
+                                resize,
+                                Task::done(Message::BrowsePdb),
+                            ]);
+                        }
+                        return resize;
                     }
                     FileMenuAction::Quit => {
                         if let Some(info) = self.mount_info.take() {
@@ -385,10 +449,12 @@ impl App {
                     return Task::none();
                 }
                 symbols.sort_by(|a, b| a.0.cmp(&b.0));
+                let enabled = vec![true; symbols.len()];
                 self.export_dialog = Some(ExportDialog {
                     format: self.view_mode,
                     path: None,
                     symbols,
+                    enabled,
                     exporting: false,
                     progress: 0,
                     current_name: String::new(),
@@ -437,6 +503,15 @@ impl App {
                     dlg.path = Some(p);
                 }
             }
+            Message::ToggleExportSymbol(idx) => {
+                if let Some(ref mut dlg) = self.export_dialog {
+                    if !dlg.exporting {
+                        if let Some(val) = dlg.enabled.get_mut(idx) {
+                            *val = !*val;
+                        }
+                    }
+                }
+            }
             Message::StartSymbolExport => {
                 if let Some(ref mut dlg) = self.export_dialog {
                     if dlg.path.is_none() || dlg.exporting {
@@ -458,6 +533,11 @@ impl App {
                     return Task::none();
                 };
                 if dlg.progress < dlg.symbols.len() {
+                    // Skip unchecked symbols
+                    if !dlg.enabled[dlg.progress] {
+                        dlg.progress += 1;
+                        return Task::perform(async {}, |()| Message::ExportTick);
+                    }
                     let (name, kind) = dlg.symbols[dlg.progress].clone();
                     dlg.current_name = name.clone();
                     let text = match (dlg.format, kind) {
@@ -479,7 +559,7 @@ impl App {
                 } else {
                     let buffer = std::mem::take(&mut dlg.buffer);
                     let path = dlg.path.clone().unwrap();
-                    let count = dlg.symbols.len();
+                    let count = dlg.enabled.iter().filter(|&&e| e).count();
                     return Task::perform(
                         async move {
                             std::fs::write(&path, buffer.as_bytes())
@@ -525,6 +605,10 @@ impl App {
             Message::ShowOptions => {
                 self.options_dialog = Some(OptionsDialog {
                     pdb_path: self.config.pdb_path.clone(),
+                    default_view: match self.config.default_view.as_str() {
+                        "json" => ViewMode::Json,
+                        _ => ViewMode::Cpp,
+                    },
                 });
             }
             Message::DismissOptions => {
@@ -552,9 +636,18 @@ impl App {
                     dlg.pdb_path = p.to_string_lossy().to_string();
                 }
             }
+            Message::OptionsDefaultViewChanged(mode) => {
+                if let Some(ref mut dlg) = self.options_dialog {
+                    dlg.default_view = mode;
+                }
+            }
             Message::SaveOptions => {
                 if let Some(dlg) = self.options_dialog.take() {
                     self.config.pdb_path = dlg.pdb_path;
+                    self.config.default_view = match dlg.default_view {
+                        ViewMode::Json => "json".to_string(),
+                        ViewMode::Cpp => "cpp".to_string(),
+                    };
                     if let Err(e) = crate::utils::config::save(&self.config) {
                         self.pdb_status = format!("Failed to save config: {e}");
                     } else {
@@ -867,6 +960,59 @@ impl App {
                 crate::utils::pe_info::parse(&temp_dir.join(pe_filename))
             },
             Message::PeDetailsLoaded,
+        )
+    }
+
+    /// Load a PDB file directly (no ISO/WIM extraction)
+    fn start_direct_pdb_load(&mut self, pdb_path: std::path::PathBuf) -> Task<Message> {
+        let file_name = pdb_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+
+        self.loading_pdb = true;
+        self.status = format!("Loading {}...", file_name);
+        self.pdb_data = None;
+        self.selected_symbol_idx = None;
+        self.json_content = text_editor::Content::with_text("");
+        self.json_context_menu = false;
+        self.symbol_filter.clear();
+        self.symbol_checks.clear();
+        self.json_cache.clear();
+        self.json_tabs.clear();
+        self.context_menu_symbol_idx = None;
+        self.symbol_tab = SymbolTab::Symbols;
+
+        Task::perform(
+            async move {
+                let extractor =
+                    PdbExtractor::open(&pdb_path).map_err(|e| format!("Parse PDB: {e}"))?;
+
+                let mut symbols = Vec::new();
+                for name in extractor.struct_names() {
+                    symbols.push(SymbolEntry {
+                        name: name.to_string(),
+                        kind: SymbolKind::Struct,
+                    });
+                }
+                for name in extractor.function_names() {
+                    symbols.push(SymbolEntry {
+                        name: name.to_string(),
+                        kind: SymbolKind::Function,
+                    });
+                }
+                for name in extractor.enum_names() {
+                    symbols.push(SymbolEntry {
+                        name: name.to_string(),
+                        kind: SymbolKind::Enum,
+                    });
+                }
+                symbols.sort_by(|a, b| a.name.cmp(&b.name));
+
+                Ok(PdbData::new(file_name, symbols, extractor))
+            },
+            Message::DirectPdbLoaded,
         )
     }
 
