@@ -1,5 +1,5 @@
 #define MyAppName "Cocytus"
-#define MyAppVersion "0.1.1"
+#define MyAppVersion "0.1.2"
 #define MyAppPublisher "I3r1h0n"
 #define MyAppExeName "Cocytus.exe"
 #define MyAppURL "https://github.com/I3r1h0n/Cocytus"
